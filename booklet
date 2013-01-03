@@ -1,0 +1,46 @@
+#!/bin/bash
+
+debug=false
+
+if [ $# -eq 0 ]; then
+    echo "direct booklet \"Unknown\" \"Print a document in booklet form\""
+    exit 0
+fi
+
+out=${DEVICE_URI#booklet:/}
+user=$2
+title=$3
+
+tmpdir=$(mktemp -d /tmp/print-$(date +'%Y%m%d%H%M%S')-XXXXX)
+tmpfile0=$tmpdir/cmdline
+tmpfile1=$tmpdir/0_orig.ps
+tmpfile2=$tmpdir/1_after-fixtd.ps
+tmpfile3=$tmpdir/2_after-psbook.ps
+tmpfile4=$tmpdir/3_final.ps
+tmpfile5=$tmpdir/output
+
+if $debug;
+then
+	tmpfile0=/dev/null
+	tmpfile1=/dev/null
+	tmpfile2=/dev/null
+	tmpfile3=/dev/null
+	tmpfile4=/dev/null
+	tmpfile5=/dev/null
+fi
+
+echo $* > $tmpfile0
+
+(
+cat $6 | tee $tmpfile1 | fixtd -tumble | tee $tmpfile2 | psbook | tee $tmpfile3| /usr/bin/pstops "2:0L@.7(21cm,0)+1L@.7(21cm,14.85cm)" | tee $tmpfile4 | lpr -T "$title" -U "$user" -P "$out"
+) 2>&1 | tee $tmpfile5
+
+if $debug;
+then
+	chmod -R a+rx $tmpdir
+else
+	rm -rf $tmpdir
+fi
+
+
+exit 0
